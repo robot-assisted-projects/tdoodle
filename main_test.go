@@ -31,6 +31,7 @@ func TestParseOptions(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.want.knob = "/dev/input/tdoodle-knob"
+			tc.want.colors = "auto"
 			got, err := parseOptions(tc.args, &bytes.Buffer{})
 			if err != nil || got != tc.want {
 				t.Fatalf("parseOptions = %#v, %v; want %#v", got, err, tc.want)
@@ -61,6 +62,7 @@ func TestParseOptionsRejectsInvalidInput(t *testing.T) {
 		{"-aspect=not-a-number"},
 		{"-autosave=-1s"},
 		{"-autosave=tomorrow"},
+		{"-colors=64"},
 	} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
 			if _, err := parseOptions(args, &bytes.Buffer{}); err == nil {

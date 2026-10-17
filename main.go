@@ -17,6 +17,7 @@ import (
 	"tdoodle/internal/canvas"
 	"tdoodle/internal/editor"
 	"tdoodle/internal/knob"
+	"tdoodle/internal/palette"
 	"tdoodle/internal/ui"
 )
 
@@ -32,6 +33,7 @@ type options struct {
 	aspect   float64
 	autosave time.Duration
 	knob     string
+	colors   string
 }
 
 func parseOptions(args []string, out io.Writer) (options, error) {
@@ -41,6 +43,7 @@ func parseOptions(args []string, out io.Writer) (options, error) {
 	f.Float64Var(&o.aspect, "aspect", 2, "terminal cell height / width (new drawings)")
 	f.DurationVar(&o.autosave, "autosave", 15*time.Second, "recovery save interval (0 disables)")
 	f.StringVar(&o.knob, "knob", "/dev/input/tdoodle-knob", "Linux media-control device for color knob (empty disables)")
+	f.StringVar(&o.colors, "colors", "auto", "drawing color capability: auto, mono, 8, 16, or 256")
 	f.Usage = func() {
 		fmt.Fprintln(out, "tDoodle is a terminal drawing tool for text, lines, rectangles, ovals, and freehand marks.")
 		fmt.Fprintln(out, "\nUsage: tdoodle [options] [filename]")
@@ -64,6 +67,9 @@ func parseOptions(args []string, out io.Writer) (options, error) {
 	}
 	if o.autosave < 0 {
 		return o, errors.New("autosave must be nonnegative")
+	}
+	if _, err := palette.ForMode(o.colors, 256, false); err != nil {
+		return o, err
 	}
 	if f.NArg() == 1 {
 		o.path = f.Arg(0)
@@ -121,7 +127,11 @@ func run(args []string, out, errOut io.Writer) error {
 	if err != nil {
 		return err
 	}
-	screen, err := tcell.NewScreen()
+	var screenOptions []tcell.TerminfoScreenOption
+	if count, force := screenColorCount(o.colors, os.Getenv("TERM"), os.Getenv("NO_COLOR") != ""); force {
+		screenOptions = append(screenOptions, tcell.OptColors(count))
+	}
+	screen, err := tcell.NewScreen(screenOptions...)
 	if err != nil {
 		return fmt.Errorf("open terminal: %w", err)
 	}
@@ -139,6 +149,7 @@ func run(args []string, out, errOut io.Writer) error {
 	screen.DisableMouse()
 	screen.EnablePaste()
 	e := editor.New(doc)
+	e.ColorMode = o.colors
 	e.Message = message
 	e.Resize(w, h)
 	knobContext, stopKnob := context.WithCancel(context.Background())

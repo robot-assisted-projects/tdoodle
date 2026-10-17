@@ -41,15 +41,9 @@ const (
 // Colors is the numbered palette order (1 through 9, then 0).
 var Colors = []Color{Red, Orange, Yellow, Green, Blue, Violet, Gray, Brown, White, Black}
 
-// BackgroundColors retains the numbered shortcuts and appends Cyan on C.
+// BackgroundColors retains the logical shortcut order with Cyan on C. Visible
+// foreground and background choices are derived by the palette package.
 var BackgroundColors = append(append([]Color(nil), Colors...), Cyan)
-
-func PaletteColors(background bool) []Color {
-	if background {
-		return BackgroundColors
-	}
-	return Colors
-}
 
 func (c Color) Valid() bool {
 	switch c {

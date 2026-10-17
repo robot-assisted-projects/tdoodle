@@ -247,8 +247,8 @@ func TestCyanBackgroundPaletteAndShortcuts(t *testing.T) {
 	}
 	key(e, tcell.KeyF6) // foreground
 	e.HandleKey(tcell.NewEventKey(tcell.KeyRune, "c", tcell.ModNone), time.Now())
-	if e.Palette != 1 || e.Text.FG != canvas.White {
-		t.Fatal("cyan shortcut changed foreground")
+	if e.Palette != 0 || e.Text.FG != canvas.Cyan {
+		t.Fatal("cyan shortcut did not choose the available foreground color")
 	}
 }
 

@@ -16,8 +16,8 @@ go build -o tdoodle .
 ### Color knob on this Linux host
 
 In volume mode, turn the keyboard knob to cycle through the drawing colors.
-Background selection includes Cyan after Black; foreground keeps its ten colors.
-In the background palette, press C for Cyan (1-9 and 0 keep their existing colors).
+Both palettes include Cyan after Black: press C in either color palette.
+The existing 1-9 and 0 shortcuts keep their logical color assignments.
 Press it to switch between foreground (FG) and background (BG). Changes apply
 immediately to the current text, pen, outline, or fill brush; Enter is not needed.
 The status row shows `Knob: FG` or `Knob: BG` after using the knob. The focused
@@ -25,6 +25,38 @@ color name is teal on black; the other name shows a color swatch. An `Aa` sample
 always previews the selected foreground/background pair. Selecting
 foreground/background with F6 also sets the knob target. Drawing previews and
 keyboard focus are preserved.
+
+### Adaptive drawing colors
+
+The knob and arrow selection offer one choice per distinct rendered shade.
+Foreground and background capabilities are detected separately: the Linux
+console offers ten foreground choices and eight backgrounds, even when terminfo
+reports only eight colors. An eight-color terminal offers eight choices in each
+palette; a sixteen-color terminal offers ten. Rich terminals keep a curated
+eleven-color palette instead of hundreds of knob positions. Monochrome terminals
+use the terminal's default colors and one palette choice.
+
+Aliases are combined in the palette labels. For example, on an eight-color
+terminal `2/3/8 Brown` represents Orange, Yellow, and Brown, and `7/9 White`
+represents Gray and White. Number shortcuts still choose their original logical
+colors; the status and palette display the matching available shade. Loading or
+viewing artwork never rewrites its saved colors, and sampled colors retain their
+original values until you choose a new drawing color. Cycling from an alias
+starts at its visible shade. Palette order stays stable while capabilities stay
+the same, including across redraws and resizes.
+
+Detection uses terminal capabilities without inspecting or adapting to themes.
+Override it when needed with `-colors=auto|mono|8|16|256` (`auto` is the default):
+
+```sh
+./tdoodle -colors=8 castle.tdoodle
+```
+
+The override applies to artwork, swatches, and the `Aa` preview together. On a
+Linux console it remains limited to sixteen foreground and eight background
+shades.
+
+### Knob device access
 
 Linux reads media events from `/dev/input/tdoodle-knob` only while this program
 is on the active local virtual console. SSH and inactive consoles ignore them.

@@ -12,9 +12,14 @@ func TestKnobColorsApplyWithoutEnterAndWrap(t *testing.T) {
 	doc, _ := canvas.New(10, 10, 2)
 	e := New(doc)
 	e.AdjustKnobColor(1, false) // white -> black
-	e.AdjustKnobColor(1, false) // black -> red
+	e.AdjustKnobColor(1, false) // black -> cyan
+	e.AdjustKnobColor(1, false) // cyan -> red
 	if e.Text.FG != canvas.Red || e.Text.BG != canvas.Black || e.Palette != 0 {
 		t.Fatalf("foreground rotation: %+v", e.Text)
+	}
+	e.AdjustKnobColor(-1, false)
+	if e.Text.FG != canvas.Cyan {
+		t.Fatalf("reverse wrap to cyan: %s", e.Text.FG)
 	}
 	e.AdjustKnobColor(-1, false)
 	if e.Text.FG != canvas.Black {

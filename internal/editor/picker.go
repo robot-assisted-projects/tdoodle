@@ -58,9 +58,9 @@ func (e *Editor) pickerStatus(pending bool) StatusInfo {
 		target = "Fill"
 	}
 	status := StatusInfo{
-		Text: "PICK " + target + ": " + paintName(paint) + " " + string(cell.FG) + "/" + string(cell.BG) +
+		Text: "PICK " + target + ": " + paintName(paint) + " " + e.displayColorNames(cell.FG, cell.BG) +
 			" | Arrows: move | Enter: sample | Esc: cancel",
-		Compact:  "PICK " + paintName(paint) + " " + string(cell.FG) + "/" + string(cell.BG) + " | Enter: sample | Esc: cancel",
+		Compact:  "PICK " + paintName(paint) + " " + e.displayColorNames(cell.FG, cell.BG) + " | Enter: sample | Esc: cancel",
 		Minimal:  "PICK | Enter: sample",
 		Fallback: "PICK",
 		Warning:  pending,

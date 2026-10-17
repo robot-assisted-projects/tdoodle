@@ -1,7 +1,5 @@
 package editor
 
-import "tdoodle/internal/canvas"
-
 // AdjustKnobColor changes the active brush without advancing a shape, painting
 // a cell, or taking keyboard focus. A press selects FG/BG; rotation applies now.
 func (e *Editor) AdjustKnobColor(step int, toggle bool) {
@@ -23,14 +21,8 @@ func (e *Editor) AdjustKnobColor(step int, toggle bool) {
 	if e.KnobBackground {
 		selected = b.BG
 	}
-	index := 0
-	colors := canvas.PaletteColors(e.KnobBackground)
-	for i, c := range colors {
-		if c == selected {
-			index = i
-			break
-		}
-	}
+	colors := e.PaletteColors(e.KnobBackground)
+	index := e.PaletteIndexFor(selected, e.KnobBackground)
 	index = (index + step%len(colors) + len(colors)) % len(colors)
 	if step != 0 {
 		e.Palette = palette

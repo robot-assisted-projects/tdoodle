@@ -51,9 +51,14 @@ func TestKnobStatusDisplaysSelectedColors(t *testing.T) {
 		for _, background := range []bool{false, true} {
 			e.KnobBackground = background
 			Render(s, e)
-			x := strings.Index(s.row(4), string(selected)+"/"+string(selected))
+			profile := e.PaletteProfile()
+			fg, bg := string(profile.Resolve(selected, false)), string(profile.Resolve(selected, true))
+			x := strings.Index(s.row(4), fg+"/"+bg)
+			if x < 0 {
+				t.Fatalf("missing canonical color names %s/%s in %q", fg, bg, s.row(4))
+			}
 			if background {
-				x += len(string(selected)) + 1
+				x += len(fg) + 1
 			}
 			_, style, _ := s.buffer.Get(x, 4)
 			if style.GetForeground() != color.Teal || style.GetBackground() != color.Black || style.HasUnderline() {
@@ -61,13 +66,13 @@ func TestKnobStatusDisplaysSelectedColors(t *testing.T) {
 			}
 			// Switching focus restores the inactive name's normal color swatch.
 			if background {
-				x -= len(string(selected)) + 1
+				x -= len(fg) + 1
 				_, style, _ = s.buffer.Get(x, 4)
 				if style != swatchStyle(selected, 1, 16, true) {
 					t.Fatal("inactive FG swatch lost its color")
 				}
 			} else {
-				x += len(string(selected)) + 1
+				x += len(fg) + 1
 				_, style, _ = s.buffer.Get(x, 4)
 				if style != swatchStyle(selected, 2, 16, true) {
 					t.Fatal("inactive BG swatch lost its color")
@@ -80,7 +85,8 @@ func TestKnobStatusDisplaysSelectedColors(t *testing.T) {
 func TestCyanBackgroundPaletteRendering(t *testing.T) {
 	t.Setenv("TERM", "linux")
 	e := newEditor(t)
-	e.Palette, e.PaletteIndex = 2, 10
+	Render(newScreen(160, 4, 16), e)
+	e.Palette, e.PaletteIndex = 2, e.PaletteIndexFor(canvas.Cyan, true)
 	e.Text.BG = canvas.Cyan
 	for width := 1; width <= 160; width++ {
 		s := newScreen(width, 4, 16)
@@ -102,7 +108,7 @@ func TestCyanBackgroundPaletteRendering(t *testing.T) {
 	e.Palette, e.PaletteIndex = 1, 0
 	s := newScreen(160, 4, 16)
 	Render(s, e)
-	if strings.Contains(s.row(3), "Cyan") {
-		t.Fatal("cyan was added to the foreground palette")
+	if !strings.Contains(s.row(3), "C Cyan") {
+		t.Fatal("cyan must also be available in the adaptive foreground palette")
 	}
 }

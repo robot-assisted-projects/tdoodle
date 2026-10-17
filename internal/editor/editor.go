@@ -10,6 +10,7 @@ import (
 	"github.com/gdamore/tcell/v3"
 	"tdoodle/internal/canvas"
 	"tdoodle/internal/geometry"
+	"tdoodle/internal/palette"
 )
 
 type Tool int
@@ -54,6 +55,8 @@ type Editor struct {
 	pickerOffset             canvas.Point
 	Palette, PaletteIndex    int
 	KnobUsed, KnobBackground bool
+	ColorMode                string
+	colorProfile             palette.Profile
 	Toolbar                  bool
 	ToolbarIndex             int
 	Help                     bool
@@ -73,12 +76,14 @@ type Editor struct {
 
 func New(doc *canvas.Document) *Editor {
 	return &Editor{
-		Doc:       doc,
-		Text:      canvas.Paint{Mode: canvas.PaintGlyph, FG: canvas.White, BG: canvas.Black},
-		Outline:   canvas.Paint{Mode: canvas.PaintAuto, FG: canvas.White, BG: canvas.Black},
-		Fill:      canvas.Paint{Mode: canvas.PaintTransparent, FG: canvas.White, BG: canvas.Black},
-		Pen:       canvas.Paint{Mode: canvas.PaintGlyph, Glyph: '*', FG: canvas.White, BG: canvas.Black},
-		viewWidth: doc.Width, viewHeight: doc.Height,
+		Doc:          doc,
+		ColorMode:    "auto",
+		colorProfile: palette.Detect(256, false),
+		Text:         canvas.Paint{Mode: canvas.PaintGlyph, FG: canvas.White, BG: canvas.Black},
+		Outline:      canvas.Paint{Mode: canvas.PaintAuto, FG: canvas.White, BG: canvas.Black},
+		Fill:         canvas.Paint{Mode: canvas.PaintTransparent, FG: canvas.White, BG: canvas.Black},
+		Pen:          canvas.Paint{Mode: canvas.PaintGlyph, Glyph: '*', FG: canvas.White, BG: canvas.Black},
+		viewWidth:    doc.Width, viewHeight: doc.Height,
 	}
 }
 
@@ -382,12 +387,7 @@ func (e *Editor) TogglePalette() {
 	if e.Palette == 2 {
 		selected = e.brush().BG
 	}
-	e.PaletteIndex = 0
-	for i, c := range canvas.PaletteColors(e.Palette == 2) {
-		if c == selected {
-			e.PaletteIndex = i
-		}
-	}
+	e.PaletteIndex = e.PaletteIndexFor(selected, e.Palette == 2)
 }
 
 func (e *Editor) commit(cells map[canvas.Point]canvas.Cell) {
@@ -572,7 +572,7 @@ func (e *Editor) HandleKey(key *tcell.EventKey, now time.Time) Action {
 		return ActionNone
 	}
 	if e.Palette > 0 {
-		colors := canvas.PaletteColors(e.Palette == 2)
+		colors := e.PaletteColors(e.Palette == 2)
 		switch key.Key() {
 		case tcell.KeyEsc:
 			e.Palette = 0
@@ -587,7 +587,7 @@ func (e *Editor) HandleKey(key *tcell.EventKey, now time.Time) Action {
 		case tcell.KeyRune:
 			if len(key.Str()) == 1 && key.Str()[0] >= '0' && key.Str()[0] <= '9' {
 				e.SetColor(canvas.Colors[(int(key.Str()[0]-'0')+9)%10])
-			} else if e.Palette == 2 && strings.EqualFold(key.Str(), "c") {
+			} else if strings.EqualFold(key.Str(), "c") {
 				e.SetColor(canvas.Cyan)
 			}
 		}
@@ -758,7 +758,7 @@ func (e *Editor) status() StatusInfo {
 		return status
 	}
 	if e.Tool == ToolText {
-		return StatusInfo{Text: fmt.Sprintf("%s/%s", e.Text.FG, e.Text.BG)}
+		return StatusInfo{Text: e.displayColorNames(e.Text.FG, e.Text.BG)}
 	}
 	if e.Tool == ToolPen {
 		position := "UP"
@@ -766,7 +766,7 @@ func (e *Editor) status() StatusInfo {
 			position = "DOWN"
 		}
 		text := "Pen " + position + ": " + paintName(e.Pen)
-		return StatusInfo{Text: text + " " + string(e.Pen.FG) + "/" + string(e.Pen.BG), Compact: text}
+		return StatusInfo{Text: text + " " + e.displayColorNames(e.Pen.FG, e.Pen.BG), Compact: text}
 	}
 	step, next := "Start", "start"
 	switch e.Tool {
@@ -809,6 +809,6 @@ func (e *Editor) status() StatusInfo {
 		status.Minimal = "PREVIEW | " + status.Minimal
 	}
 	brush := e.brush()
-	status.Text = status.Compact + " | " + label + ": " + paintName(*brush) + " " + string(brush.FG) + "/" + string(brush.BG)
+	status.Text = status.Compact + " | " + label + ": " + paintName(*brush) + " " + e.displayColorNames(brush.FG, brush.BG)
 	return status
 }
