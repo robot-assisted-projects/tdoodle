@@ -1,0 +1,2 @@
+# Tested K673 2.4 GHz receiver: allow only its consumer-control input node.
+SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_VENDOR_ID}=="3554", ENV{ID_MODEL_ID}=="fa09", ATTRS{name}=="CX 2.4G Wireless Receiver Consumer Control", GROUP="tdoodle-knob", MODE="0660", SYMLINK+="input/tdoodle-knob"

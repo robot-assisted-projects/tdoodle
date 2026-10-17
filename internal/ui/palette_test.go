@@ -9,7 +9,7 @@ import (
 )
 
 func TestColorMappingsRespectTerminalLimits(t *testing.T) {
-	for _, logical := range canvas.Colors {
+	for _, logical := range canvas.BackgroundColors {
 		c := ColorFor(logical, false, 256, false)
 		if !c.IsRGB() {
 			t.Fatalf("rich terminal lost RGB mapping for %s", logical)
@@ -30,6 +30,9 @@ func TestColorMappingsRespectTerminalLimits(t *testing.T) {
 	}
 	if ColorFor(canvas.Red, true, 16, true) != color.Maroon {
 		t.Fatal("Linux background should use normal eight-color red")
+	}
+	if ColorFor(canvas.Cyan, true, 16, true) != color.Teal {
+		t.Fatal("Linux cyan background must use the eighth basic color")
 	}
 	if ColorFor(canvas.Red, false, 0, false) != color.Default {
 		t.Fatal("monochrome screen should use default colors")

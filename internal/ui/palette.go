@@ -13,6 +13,7 @@ var rgbColors = map[canvas.Color]color.Color{
 	canvas.Blue: color.NewRGBColor(89, 142, 222), canvas.Violet: color.NewRGBColor(183, 123, 224),
 	canvas.Gray: color.NewRGBColor(144, 144, 144), canvas.Brown: color.NewRGBColor(149, 101, 69),
 	canvas.White: color.NewRGBColor(244, 244, 244), canvas.Black: color.NewRGBColor(16, 16, 16),
+	canvas.Cyan: color.NewRGBColor(64, 191, 191),
 }
 
 var ansi16Colors = map[canvas.Color]color.Color{
@@ -21,6 +22,7 @@ var ansi16Colors = map[canvas.Color]color.Color{
 	canvas.Blue: color.Blue, canvas.Violet: color.Fuchsia,
 	canvas.Gray: color.Gray, canvas.Brown: color.Olive,
 	canvas.White: color.White, canvas.Black: color.Black,
+	canvas.Cyan: color.Aqua,
 }
 
 var ansi8Colors = map[canvas.Color]color.Color{
@@ -29,6 +31,7 @@ var ansi8Colors = map[canvas.Color]color.Color{
 	canvas.Blue: color.Navy, canvas.Violet: color.Purple,
 	canvas.Gray: color.Silver, canvas.Brown: color.Olive,
 	canvas.White: color.Silver, canvas.Black: color.Black,
+	canvas.Cyan: color.Teal,
 }
 
 // ColorFor maps a document's logical color to the current display.  Logical

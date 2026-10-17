@@ -174,6 +174,34 @@ func renderStatus(screen Screen, e *editor.Editor, w, y int, base tcell.Style, c
 	}
 	if rightWidth > 0 {
 		putText(screen, w-rightWidth, y, right, rightWidth, statusStyle)
+		if e.KnobUsed && e.Message == "" && !e.Picker && !e.Help {
+			renderKnobSwatches(screen, e, right, w-rightWidth, y, rightWidth, colors, linux)
+		}
+	}
+}
+
+// The focused name is a teal control label, independent of the chosen color.
+// The other name is a swatch; Aa always previews the actual drawing colors.
+func renderKnobSwatches(screen Screen, e *editor.Editor, text string, x, y, width, colors int, linux bool) {
+	paint := currentPaint(e)
+	fg, bg := string(paint.FG), string(paint.BG)
+	if offset := strings.Index(text, fg+"/"+bg); offset >= 0 {
+		fgStyle := swatchStyle(paint.FG, 1, colors, linux)
+		bgStyle := swatchStyle(paint.BG, 2, colors, linux)
+		focus := tcell.StyleDefault.Foreground(color.Teal).Background(color.Black)
+		if e.KnobBackground {
+			bgStyle = focus
+		} else {
+			fgStyle = focus
+		}
+		putText(screen, x+offset, y, fg, max(0, width-offset), fgStyle)
+		offset += len(fg) + 1
+		putText(screen, x+offset, y, bg, max(0, width-offset), bgStyle)
+	}
+	if offset := strings.Index(text, "[Aa]"); offset >= 0 {
+		offset++
+		style := tcell.StyleDefault.Foreground(ColorFor(paint.FG, false, colors, linux)).Background(ColorFor(paint.BG, true, colors, linux))
+		putText(screen, x+offset, y, "Aa", max(0, width-offset), style)
 	}
 }
 
@@ -209,24 +237,25 @@ func renderPalette(screen Screen, e *editor.Editor, w, y, colors int, linux bool
 	if approx {
 		prefix = name + " (approx): "
 	}
-	labels := make([]string, len(canvas.Colors))
-	for i, c := range canvas.Colors {
+	paletteColors := canvas.PaletteColors(e.Palette == 2)
+	labels := make([]string, len(paletteColors))
+	for i, c := range paletteColors {
 		name := string(c)
-		labels[i] = paletteLabel(i, fmt.Sprintf("%d %s", (i+1)%10, strings.ToUpper(name[:1])+name[1:]), e.PaletteIndex)
+		labels[i] = paletteLabel(i, fmt.Sprintf("%s %s", paletteShortcut(i), strings.ToUpper(name[:1])+name[1:]), e.PaletteIndex)
 	}
 	if len(prefix)+len(strings.Join(labels, " ")) > w {
 		prefix = short + ": "
 		if approx {
 			prefix = short + "~: "
 		}
-		abbreviated := []string{"Red", "Org", "Yel", "Grn", "Blu", "Vio", "Gry", "Brn", "Wht", "Blk"}
+		abbreviated := []string{"Red", "Org", "Yel", "Grn", "Blu", "Vio", "Gry", "Brn", "Wht", "Blk", "Cyn"}
 		for i := range labels {
-			labels[i] = paletteLabel(i, fmt.Sprintf("%d%s", (i+1)%10, abbreviated[i]), e.PaletteIndex)
+			labels[i] = paletteLabel(i, paletteShortcut(i)+abbreviated[i], e.PaletteIndex)
 		}
 	}
 	if len(prefix)+len(strings.Join(labels, " ")) > w {
 		for i := range labels {
-			labels[i] = paletteLabel(i, fmt.Sprint((i+1)%10), e.PaletteIndex)
+			labels[i] = paletteLabel(i, paletteShortcut(i), e.PaletteIndex)
 		}
 	}
 	if len(prefix)+len(strings.Join(labels, " ")) > w {
@@ -237,19 +266,19 @@ func renderPalette(screen Screen, e *editor.Editor, w, y, colors int, linux bool
 		prefix += " "
 	}
 	if w <= len(prefix) {
-		i := max(0, min(e.PaletteIndex, len(canvas.Colors)-1))
-		putText(screen, 0, y, fmt.Sprint((i+1)%10), w, swatchStyle(canvas.Colors[i], e.Palette, colors, linux).Underline(true).Bold(true))
+		i := max(0, min(e.PaletteIndex, len(paletteColors)-1))
+		putText(screen, 0, y, paletteShortcut(i), w, swatchStyle(paletteColors[i], e.Palette, colors, linux).Underline(true).Bold(true))
 		return
 	}
 	x := putText(screen, 0, y, prefix, w, base)
 	// Very narrow displays show the current arrow selection and its name.
 	if x+len(strings.Join(labels, " ")) > w {
-		i := max(0, min(e.PaletteIndex, len(canvas.Colors)-1))
-		label := fmt.Sprintf("%d %s", (i+1)%10, string(canvas.Colors[i]))
-		putText(screen, x, y, label, w-x, swatchStyle(canvas.Colors[i], e.Palette, colors, linux).Underline(true).Bold(true))
+		i := max(0, min(e.PaletteIndex, len(paletteColors)-1))
+		label := fmt.Sprintf("%s %s", paletteShortcut(i), string(paletteColors[i]))
+		putText(screen, x, y, label, w-x, swatchStyle(paletteColors[i], e.Palette, colors, linux).Underline(true).Bold(true))
 		return
 	}
-	for i, c := range canvas.Colors {
+	for i, c := range paletteColors {
 		if i > 0 {
 			x += putText(screen, x, y, " ", w-x, base)
 		}
@@ -262,6 +291,13 @@ func renderPalette(screen Screen, e *editor.Editor, w, y, colors int, linux bool
 		}
 		x += putText(screen, x, y, labels[i], w-x, style)
 	}
+}
+
+func paletteShortcut(index int) string {
+	if index == 10 {
+		return "C"
+	}
+	return fmt.Sprint((index + 1) % 10)
 }
 
 func paletteLabel(index int, label string, selected int) string {
@@ -292,9 +328,8 @@ func currentPaint(e *editor.Editor) canvas.Paint {
 func swatchStyle(c canvas.Color, palette, colors int, linux bool) tcell.Style {
 	if palette == 1 {
 		fg := ColorFor(c, false, colors, linux)
-		r, g, b := fg.RGB()
 		bg := color.Black
-		if 299*r+587*g+114*b < 60000 {
+		if c == canvas.Black {
 			bg = color.Silver
 		}
 		return tcell.StyleDefault.Foreground(fg).Background(bg)

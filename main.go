@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"github.com/gdamore/tcell/v3"
 	"tdoodle/internal/canvas"
 	"tdoodle/internal/editor"
+	"tdoodle/internal/knob"
 	"tdoodle/internal/ui"
 )
 
@@ -29,6 +31,7 @@ type options struct {
 	path     string
 	aspect   float64
 	autosave time.Duration
+	knob     string
 }
 
 func parseOptions(args []string, out io.Writer) (options, error) {
@@ -37,6 +40,7 @@ func parseOptions(args []string, out io.Writer) (options, error) {
 	f.SetOutput(out)
 	f.Float64Var(&o.aspect, "aspect", 2, "terminal cell height / width (new drawings)")
 	f.DurationVar(&o.autosave, "autosave", 15*time.Second, "recovery save interval (0 disables)")
+	f.StringVar(&o.knob, "knob", "/dev/input/tdoodle-knob", "Linux media-control device for color knob (empty disables)")
 	f.Usage = func() {
 		fmt.Fprintln(out, "tDoodle is a terminal drawing tool for text, lines, rectangles, ovals, and freehand marks.")
 		fmt.Fprintln(out, "\nUsage: tdoodle [options] [filename]")
@@ -137,6 +141,9 @@ func run(args []string, out, errOut io.Writer) error {
 	e := editor.New(doc)
 	e.Message = message
 	e.Resize(w, h)
+	knobContext, stopKnob := context.WithCancel(context.Background())
+	defer stopKnob()
+	knobEvents := knob.Watch(knobContext, o.knob, knob.LocalConsoleActive)
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	defer signal.Stop(signals)
@@ -155,6 +162,8 @@ func run(args []string, out, errOut io.Writer) error {
 		action := editor.ActionNone
 		redraw := true
 		select {
+		case event := <-knobEvents:
+			e.AdjustKnobColor(event.Step, event.Toggle)
 		case event, ok := <-screen.EventQ():
 			if !ok {
 				return errors.New("terminal closed unexpectedly; check the recovery file")

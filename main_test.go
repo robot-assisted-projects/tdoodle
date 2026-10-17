@@ -30,11 +30,21 @@ func TestParseOptions(t *testing.T) {
 		{"literal flag filename", []string{"--", "-art.tdoodle"}, options{path: "-art.tdoodle", aspect: 2, autosave: 15 * time.Second}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			tc.want.knob = "/dev/input/tdoodle-knob"
 			got, err := parseOptions(tc.args, &bytes.Buffer{})
 			if err != nil || got != tc.want {
 				t.Fatalf("parseOptions = %#v, %v; want %#v", got, err, tc.want)
 			}
 		})
+	}
+}
+
+func TestKnobDeviceOption(t *testing.T) {
+	for _, path := range []string{"", "/dev/input/custom-knob"} {
+		got, err := parseOptions([]string{"-knob=" + path}, &bytes.Buffer{})
+		if err != nil || got.knob != path {
+			t.Fatalf("knob path %q: options=%+v error=%v", path, got, err)
+		}
 	}
 }
 

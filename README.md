@@ -13,6 +13,36 @@ go build -o tdoodle .
 
 ## Run
 
+### Color knob on this Linux host
+
+In volume mode, turn the keyboard knob to cycle through the drawing colors.
+Background selection includes Cyan after Black; foreground keeps its ten colors.
+In the background palette, press C for Cyan (1-9 and 0 keep their existing colors).
+Press it to switch between foreground (FG) and background (BG). Changes apply
+immediately to the current text, pen, outline, or fill brush; Enter is not needed.
+The status row shows `Knob: FG` or `Knob: BG` after using the knob. The focused
+color name is teal on black; the other name shows a color swatch. An `Aa` sample
+always previews the selected foreground/background pair. Selecting
+foreground/background with F6 also sets the knob target. Drawing previews and
+keyboard focus are preserved.
+
+Linux reads media events from `/dev/input/tdoodle-knob` only while this program
+is on the active local virtual console. SSH and inactive consoles ignore them.
+The receiver can be unplugged and reconnected while the editor is running.
+`-knob=""` disables the knob; `-knob=/dev/input/other-device` overrides its path.
+Other platforms retain normal keyboard operation without raw input support.
+
+`99-tdoodle-knob.rules` recognizes the tested CX 2.4 GHz receiver (`3554:fa09`)
+and grants the `tdoodle-knob` group access to its consumer-control node only.
+Yuvi belongs to this group; additional users need to be added and log in again.
+Wired or Bluetooth connections may need a corresponding rule after testing.
+
+This host build is based on fine-fiddle/tdoodle commit
+`d72a80af542f1d6c42274f86c20a87dfc9dc8708`, with local knob support.
+The maintained source is in `/home/codex/tdoodle`; an installed source snapshot
+is in `/usr/local/src/tdoodle`. The original executable is backed up at
+`/usr/local/lib/tdoodle/tdoodle.before-knob`.
+
 tdoodle [filename] 
 Open a .tdoodle drawing for editing. 
 A missing filename starts a blank drawing with the date time as filename

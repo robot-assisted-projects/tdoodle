@@ -53,6 +53,7 @@ type Editor struct {
 	PickerCursor             canvas.Point
 	pickerOffset             canvas.Point
 	Palette, PaletteIndex    int
+	KnobUsed, KnobBackground bool
 	Toolbar                  bool
 	ToolbarIndex             int
 	Help                     bool
@@ -376,11 +377,13 @@ func (e *Editor) TogglePalette() {
 		e.Palette = 1
 	}
 	e.Toolbar, e.Help = false, false
+	e.KnobBackground = e.Palette == 2
 	selected := e.brush().FG
 	if e.Palette == 2 {
 		selected = e.brush().BG
 	}
-	for i, c := range canvas.Colors {
+	e.PaletteIndex = 0
+	for i, c := range canvas.PaletteColors(e.Palette == 2) {
 		if c == selected {
 			e.PaletteIndex = i
 		}
@@ -569,20 +572,23 @@ func (e *Editor) HandleKey(key *tcell.EventKey, now time.Time) Action {
 		return ActionNone
 	}
 	if e.Palette > 0 {
+		colors := canvas.PaletteColors(e.Palette == 2)
 		switch key.Key() {
 		case tcell.KeyEsc:
 			e.Palette = 0
 		case tcell.KeyTab:
 			e.TogglePalette()
 		case tcell.KeyLeft, tcell.KeyUp:
-			e.PaletteIndex = (e.PaletteIndex + 9) % 10
+			e.PaletteIndex = (e.PaletteIndex + len(colors) - 1) % len(colors)
 		case tcell.KeyRight, tcell.KeyDown:
-			e.PaletteIndex = (e.PaletteIndex + 1) % 10
+			e.PaletteIndex = (e.PaletteIndex + 1) % len(colors)
 		case tcell.KeyEnter:
-			e.SetColor(canvas.Colors[e.PaletteIndex])
+			e.SetColor(colors[e.PaletteIndex])
 		case tcell.KeyRune:
 			if len(key.Str()) == 1 && key.Str()[0] >= '0' && key.Str()[0] <= '9' {
 				e.SetColor(canvas.Colors[(int(key.Str()[0]-'0')+9)%10])
+			} else if e.Palette == 2 && strings.EqualFold(key.Str(), "c") {
+				e.SetColor(canvas.Cyan)
 			}
 		}
 		return ActionNone
@@ -704,6 +710,18 @@ type StatusInfo struct {
 }
 
 func (e *Editor) Status() StatusInfo {
+	status := e.status()
+	if e.KnobUsed && e.Message == "" {
+		target := "FG"
+		if e.KnobBackground {
+			target = "BG"
+		}
+		status.Text += " | Knob: " + target + " [Aa]"
+	}
+	return status
+}
+
+func (e *Editor) status() StatusInfo {
 	if e.Message != "" {
 		return StatusInfo{Text: e.Message}
 	}

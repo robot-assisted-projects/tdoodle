@@ -22,11 +22,12 @@ func encodedDocument(t *testing.T, d *Document) string {
 func TestSaveLoadRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "drawing.tdoodle")
-	d := mustDocument(t, 10, 2)
+	d := mustDocument(t, 11, 2)
 	for i, color := range Colors {
 		d.Set(Point{i, 0}, Cell{Rune: rune('A' + i), FG: color, BG: Colors[9-i]})
 		d.Set(Point{i, 1}, Cell{Rune: ' ', FG: color, BG: color})
 	}
+	d.Set(Point{10, 0}, Cell{Rune: 'C', FG: White, BG: Cyan})
 	if err := Save(path, d); err != nil {
 		t.Fatal(err)
 	}

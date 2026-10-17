@@ -214,6 +214,44 @@ func TestPaletteDoesNotChangeOutlineWhileChoosingFill(t *testing.T) {
 	}
 }
 
+func TestCyanBackgroundPaletteAndShortcuts(t *testing.T) {
+	e := newTestEditor(t)
+	key(e, tcell.KeyF6)
+	key(e, tcell.KeyF6)
+	key(e, tcell.KeyRight) // black -> cyan
+	if e.PaletteIndex != 10 {
+		t.Fatal("arrows skipped cyan")
+	}
+	key(e, tcell.KeyEnter)
+	if e.Text.BG != canvas.Cyan {
+		t.Fatal("Enter did not apply cyan")
+	}
+	key(e, tcell.KeyF6)
+	key(e, tcell.KeyF6)
+	if e.PaletteIndex != 10 {
+		t.Fatal("reopening palette lost cyan selection")
+	}
+	key(e, tcell.KeyRight) // cyan -> red
+	if e.PaletteIndex != 0 {
+		t.Fatal("background palette did not wrap after cyan")
+	}
+	e.HandleKey(tcell.NewEventKey(tcell.KeyRune, "0", tcell.ModNone), time.Now())
+	if e.Text.BG != canvas.Black {
+		t.Fatal("0 must remain black")
+	}
+	key(e, tcell.KeyF6)
+	key(e, tcell.KeyF6)
+	e.HandleKey(tcell.NewEventKey(tcell.KeyRune, "c", tcell.ModNone), time.Now())
+	if e.Text.BG != canvas.Cyan {
+		t.Fatal("C did not choose cyan background")
+	}
+	key(e, tcell.KeyF6) // foreground
+	e.HandleKey(tcell.NewEventKey(tcell.KeyRune, "c", tcell.ModNone), time.Now())
+	if e.Palette != 1 || e.Text.FG != canvas.White {
+		t.Fatal("cyan shortcut changed foreground")
+	}
+}
+
 func TestPenUndoGroupsWholeStrokeAndSwitchFinishesIt(t *testing.T) {
 	e := newTestEditor(t)
 	e.SwitchTool(ToolPen)
