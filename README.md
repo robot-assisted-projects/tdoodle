@@ -117,7 +117,8 @@ Line:      [start] --> [stroke] --> [draw]
 
 The strip starts with `Drawing Oval`, `Drawing Rectangle`, or `Drawing Line`.
 Its black background ends two spaces after the text; the rest of the row shows
-the canvas. The current step is bold with reversed foreground/background.
+the canvas. The current step is bold black text on a lime green background
+(green on eight-color terminals; reversed colors in monochrome).
 Enter advances; Backspace goes back. The final Enter commits the shape and removes the extra
 row. The drawing scrolls above both status rows without changing the document's
 dimensions. Narrow terminals shorten the chain while keeping the active step

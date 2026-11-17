@@ -15,6 +15,7 @@ import (
 )
 
 func TestPhaseBarFollowsShapeForwardAndBack(t *testing.T) {
+	t.Setenv("TERM", "xterm-256color")
 	for _, tc := range []struct {
 		tool  editor.Tool
 		steps []string
@@ -48,10 +49,13 @@ func TestPhaseBarFollowsShapeForwardAndBack(t *testing.T) {
 					start := strings.Index(row, "["+step+"]")
 					for x := start; x < start+len(step)+2; x++ {
 						_, style, _ := s.buffer.Get(x, 10)
-						if style.HasReverse() != (i == phase) || style.HasBold() != (i == phase) {
+						if style.HasReverse() || style.HasBold() != (i == phase) {
 							t.Fatalf("phase %d: %s has incorrect highlighting", phase, step)
 						}
-						if style.GetBackground() != color.Black {
+						if i == phase && (style.GetBackground() != color.Lime || style.GetForeground() != color.Black) {
+							t.Fatalf("phase %d: %s must show black text on lime", phase, step)
+						}
+						if i != phase && style.GetBackground() != color.Black {
 							t.Fatalf("phase %d: %s lost the strip's black background", phase, step)
 						}
 					}
@@ -163,7 +167,7 @@ func TestPhaseBarFitsSmallScreensAndPausedOverlays(t *testing.T) {
 							t.Fatalf("overlay or clipping hid active step: %q", row)
 						}
 						_, style, _ := s.buffer.Get(x, size[1]-2)
-						if !style.HasBold() || !style.HasReverse() {
+						if !style.HasBold() || style.HasReverse() != (colors == 0) {
 							t.Fatal("active step lost highlighting")
 						}
 					}

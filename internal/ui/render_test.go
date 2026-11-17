@@ -145,8 +145,8 @@ func TestPhaseBarAndActionFitNarrowScreens(t *testing.T) {
 						t.Fatalf("missing active fill phase: %q", s.row(2))
 					}
 					_, style, _ := s.buffer.Get(x, 2)
-					if !style.HasBold() || !style.HasReverse() {
-						t.Fatal("active fill phase lacks bold and reverse highlighting")
+					if !style.HasBold() || style.HasReverse() != (colors == 0) {
+						t.Fatal("active fill phase lacks bold highlighting or monochrome contrast")
 					}
 				}
 				if width >= 24 && !strings.Contains(row, "Enter: draw") {

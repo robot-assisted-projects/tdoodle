@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v3"
+	"github.com/gdamore/tcell/v3/color"
 
 	"tdoodle/internal/editor"
 )
@@ -61,7 +62,15 @@ func renderPhases(screen Screen, e *editor.Editor, width, y int, base tcell.Styl
 		}
 		style := base
 		if i == active {
-			style = style.Bold(true).Reverse(true)
+			style = style.Bold(true)
+			switch e.PaletteProfile().MaxColors(true) {
+			case 0:
+				style = style.Reverse(true)
+			case 2, 8:
+				style = style.Foreground(color.Black).Background(color.Green)
+			default:
+				style = style.Foreground(color.Black).Background(color.Lime)
+			}
 		}
 		x += putText(screen, x, y, labels[i], limit-x, style)
 	}
