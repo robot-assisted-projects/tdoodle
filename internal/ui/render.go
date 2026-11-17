@@ -26,8 +26,8 @@ type Screen interface {
 	Colors() int
 }
 
-// Render redraws the viewport and its single status row. Uncommitted operations
-// are composited over the document, so previews never become permanent here.
+// Render fits the viewport above the status rows and redraws it. Uncommitted
+// operations are composited over the document and never become permanent here.
 func Render(screen Screen, e *editor.Editor) {
 	profile, err := palette.ForMode(e.ColorMode, screen.Colors(), os.Getenv("TERM") == "linux")
 	if err != nil {
@@ -40,10 +40,12 @@ func Render(screen Screen, e *editor.Editor) {
 		screen.Show()
 		return
 	}
+	e.Resize(w, h)
+	canvasHeight := h - e.StatusRows(h)
 	blank := canvas.Blank()
 	preview := e.Preview()
 	cursor := e.DisplayCursor()
-	for y := 0; y < h-1; y++ {
+	for y := 0; y < canvasHeight; y++ {
 		for x := 0; x < w; x++ {
 			point := canvas.Point{X: x + e.Offset.X, Y: y + e.Offset.Y}
 			cell := blank
@@ -72,8 +74,13 @@ func Render(screen Screen, e *editor.Editor) {
 		}
 	}
 	base := tcell.StyleDefault.Foreground(color.Silver).Background(color.Black)
-	for x := 0; x < w; x++ {
-		screen.Put(x, h-1, " ", base)
+	for y := canvasHeight; y < h; y++ {
+		for x := 0; x < w; x++ {
+			screen.Put(x, y, " ", base)
+		}
+	}
+	if e.StatusRows(h) == 2 {
+		renderPhases(screen, e, w, h-2, base)
 	}
 	if e.Palette != 0 {
 		renderPalette(screen, e, w, h-1, profile)
@@ -81,10 +88,10 @@ func Render(screen Screen, e *editor.Editor) {
 		renderStatus(screen, e, w, h-1, base, profile)
 	}
 	if e.Help {
-		renderHelp(screen, e.HelpScroll, w, h-1, base)
+		renderHelp(screen, e.HelpScroll, w, canvasHeight, base)
 	}
 	cx, cy := cursor.X-e.Offset.X, cursor.Y-e.Offset.Y
-	if !e.Help && e.Palette == 0 && !e.Toolbar && cx >= 0 && cx < w && cy >= 0 && cy < h-1 {
+	if !e.Help && e.Palette == 0 && !e.Toolbar && cx >= 0 && cx < w && cy >= 0 && cy < canvasHeight {
 		screen.ShowCursor(cx, cy)
 	} else {
 		screen.HideCursor()
@@ -125,10 +132,15 @@ func renderStatus(screen Screen, e *editor.Editor, w, y int, base tcell.Style, p
 	minimum := fmt.Sprintf("%s%d", toolTiny[active], active+1)
 	status := e.Status()
 	statusStyle := base
-	if status.Warning {
-		statusStyle = base.Foreground(profile.Map(canvas.Yellow, false)).Bold(true)
-	} else if e.Message != "" {
+	if e.Message != "" {
 		statusStyle = base.Bold(true)
+	}
+	_, h := screen.Size()
+	if status.Warning && e.StatusRows(h) == 1 {
+		// Short terminals cannot fit a separate phase row.
+		status.Text = "PREVIEW | " + status.Text
+		status.Compact = "PREVIEW | " + status.Compact
+		status.Minimal = "PREVIEW | " + status.Minimal
 	}
 	// Reserve the active tool even when a long prompt needs most of the row.
 	available := max(0, w-len(minimum)-1)
@@ -178,15 +190,15 @@ func renderStatus(screen Screen, e *editor.Editor, w, y int, base tcell.Style, p
 	}
 	if rightWidth > 0 {
 		putText(screen, w-rightWidth, y, right, rightWidth, statusStyle)
-		if e.KnobUsed && e.Message == "" && !e.Picker && !e.Help {
-			renderKnobSwatches(screen, e, right, w-rightWidth, y, rightWidth, profile)
+		if e.Message == "" && !e.Picker && !e.Help && !e.Toolbar {
+			renderBrushSwatches(screen, e, right, w-rightWidth, y, rightWidth, profile)
 		}
 	}
 }
 
-// The focused name is a teal control label, independent of the chosen color.
-// The other name is a swatch; Aa always previews the actual drawing colors.
-func renderKnobSwatches(screen Screen, e *editor.Editor, text string, x, y, width int, profile palette.Profile) {
+// Color names and Aa preview the brush for keyboard and knob users alike.
+// After knob use, its focused name becomes a teal control label.
+func renderBrushSwatches(screen Screen, e *editor.Editor, text string, x, y, width int, profile palette.Profile) {
 	paint := currentPaint(e)
 	fg, bg := string(profile.Resolve(paint.FG, false)), string(profile.Resolve(paint.BG, true))
 	if offset := strings.Index(text, fg+"/"+bg); offset >= 0 {
@@ -196,10 +208,12 @@ func renderKnobSwatches(screen Screen, e *editor.Editor, text string, x, y, widt
 		if profile.MaxColors(false) == 0 {
 			focus = tcell.StyleDefault.Bold(true)
 		}
-		if e.KnobBackground {
-			bgStyle = focus
-		} else {
-			fgStyle = focus
+		if e.KnobUsed {
+			if e.KnobBackground {
+				bgStyle = focus
+			} else {
+				fgStyle = focus
+			}
 		}
 		putText(screen, x+offset, y, fg, max(0, width-offset), fgStyle)
 		offset += len(fg) + 1

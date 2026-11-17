@@ -126,7 +126,7 @@ func TestStatusUsesOneRowAndPrioritizesMessage(t *testing.T) {
 	}
 }
 
-func TestPreviewStatusPrioritizesActionOnNarrowScreens(t *testing.T) {
+func TestPhaseBarAndActionFitNarrowScreens(t *testing.T) {
 	e := newEditor(t)
 	e.SwitchTool(editor.ToolRectangle)
 	e.Enter()
@@ -140,13 +140,13 @@ func TestPreviewStatusPrioritizesActionOnNarrowScreens(t *testing.T) {
 				Render(s, e)
 				row := s.row(3)
 				if width >= 10 {
-					x := strings.Index(row, "PREVIEW")
+					x := strings.Index(s.row(2), "[fill]")
 					if x < 0 {
-						t.Fatalf("missing unfinished-shape warning: %q", row)
+						t.Fatalf("missing active fill phase: %q", s.row(2))
 					}
-					_, style, _ := s.buffer.Get(x, 3)
-					if !style.HasBold() || style.GetForeground() != ColorFor(canvas.Yellow, false, colors, false) {
-						t.Fatal("preview warning lacks terminal-adapted yellow and bold styling")
+					_, style, _ := s.buffer.Get(x, 2)
+					if !style.HasBold() || !style.HasReverse() {
+						t.Fatal("active fill phase lacks bold and reverse highlighting")
 					}
 				}
 				if width >= 24 && !strings.Contains(row, "Enter: draw") {
@@ -163,7 +163,7 @@ func TestPreviewStatusPrioritizesActionOnNarrowScreens(t *testing.T) {
 	}
 }
 
-func TestPreviewWarningClearsWhenOperationEnds(t *testing.T) {
+func TestPhaseBarClearsWhenOperationEnds(t *testing.T) {
 	for _, end := range []tcell.Key{tcell.KeyEnter, tcell.KeyEsc, tcell.KeyF1, tcell.KeyBackspace, tcell.KeyCtrlZ} {
 		t.Run(fmt.Sprint(end), func(t *testing.T) {
 			e := newEditor(t)
@@ -172,25 +172,25 @@ func TestPreviewWarningClearsWhenOperationEnds(t *testing.T) {
 			e.Move(4, 2)
 			s := newScreen(80, 5, 16)
 			Render(s, e)
-			if !strings.Contains(s.row(4), "PREVIEW") {
+			if !strings.Contains(s.row(3), "PREVIEW") {
 				t.Fatal("unfinished line did not warn")
 			}
 			e.HandleKey(tcell.NewEventKey(end, "", tcell.ModNone), time.Now())
 			Render(s, e)
-			if strings.Contains(s.row(4), "PREVIEW") || e.Status().Warning {
+			if strings.Contains(s.row(3)+s.row(4), "PREVIEW") || e.Status().Warning {
 				t.Fatalf("ended operation retained warning: %q", s.row(4))
 			}
 			for x := 0; x < s.w; x++ {
-				_, style, _ := s.buffer.Get(x, 4)
-				if style.GetForeground() != color.Silver {
-					t.Fatalf("ended operation retained warning color at column %d", x)
+				_, style, _ := s.buffer.Get(x, 3)
+				if style.HasReverse() || style.HasBold() {
+					t.Fatalf("ended operation retained phase highlighting at column %d", x)
 				}
 			}
 		})
 	}
 }
 
-func TestPausedPreviewKeepsWarningAndOverlayControls(t *testing.T) {
+func TestPausedPreviewKeepsPhaseBarAndOverlayControls(t *testing.T) {
 	for _, overlay := range []struct {
 		name string
 		key  tcell.Key
@@ -209,7 +209,7 @@ func TestPausedPreviewKeepsWarningAndOverlayControls(t *testing.T) {
 			s := newScreen(140, 8, 16)
 			Render(s, e)
 			row := s.row(7)
-			if !strings.Contains(row, "PREVIEW paused") || !strings.Contains(row, overlay.want) || !strings.Contains(row, "Arrows") {
+			if !strings.Contains(s.row(6), "PREVIEW paused") || !strings.Contains(row, overlay.want) || !strings.Contains(row, "Arrows") {
 				t.Fatalf("paused status lost warning or controls: %q", row)
 			}
 			if e.Phase != 1 || !reflect.DeepEqual(preview, e.Preview()) {
@@ -220,9 +220,12 @@ func TestPausedPreviewKeepsWarningAndOverlayControls(t *testing.T) {
 			if !strings.Contains(s.row(7), e.Message) || strings.Contains(s.row(7), "PREVIEW") {
 				t.Fatalf("preview warning displaced save error: %q", s.row(7))
 			}
+			if !strings.Contains(s.row(6), "PREVIEW paused") {
+				t.Fatal("save message hid the unfinished shape's phase row")
+			}
 			e.HandleKey(tcell.NewEventKey(tcell.KeyEsc, "", tcell.ModNone), time.Now())
 			Render(s, e)
-			if !strings.Contains(s.row(7), "PREVIEW") || !strings.Contains(s.row(7), "Enter: draw") {
+			if !strings.Contains(s.row(6), "PREVIEW") || !strings.Contains(s.row(7), "Enter: draw") {
 				t.Fatalf("closing overlay lost preview guidance: %q", s.row(7))
 			}
 		})

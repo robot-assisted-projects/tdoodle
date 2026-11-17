@@ -9,7 +9,9 @@ import (
 var helpText = []string{
 	"Up/Down or Page Up/Down scroll; Home starts; F8 / Esc closes this help.",
 	"Arrows move. For shapes, press Enter at each ->; the last Enter draws.",
-	"Status shows the current step and next Enter action; yellow PREVIEW means unfinished.",
+	"Unfinished shapes show a second status row; the bold highlighted step is active.",
+	"Enter advances to the next step; the final Enter draws and closes the phase row.",
+	"The Aa sample in the main status row shows the current foreground/background colors.",
 	"Backspace goes back one shape step. Esc or another tool cancels the preview.",
 	"",
 	"F1 TEXT - Place characters anywhere.",

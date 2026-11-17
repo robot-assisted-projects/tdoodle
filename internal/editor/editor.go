@@ -89,8 +89,22 @@ func New(doc *canvas.Document) *Editor {
 
 // Resize changes only the viewport. The document retains every off-screen cell.
 func (e *Editor) Resize(width, height int) {
-	e.viewWidth, e.viewHeight = max(1, width), max(1, height-1)
+	e.viewWidth, e.viewHeight = max(1, width), max(1, height-e.StatusRows(height))
 	e.ensureVisible()
+}
+
+// PendingShape reports an operation that still needs Enter to commit.
+func (e *Editor) PendingShape() bool {
+	return e.Phase > 0 && (e.Tool == ToolLine || e.Tool == ToolRectangle || e.Tool == ToolOval)
+}
+
+// StatusRows reserves a phase row while a shape is unfinished, leaving at
+// least one canvas row on very short terminals.
+func (e *Editor) StatusRows(height int) int {
+	if e.PendingShape() && height >= 3 {
+		return 2
+	}
+	return 1
 }
 
 func (e *Editor) ensureVisible() {
@@ -701,7 +715,7 @@ func paintName(p canvas.Paint) string {
 	}
 }
 
-// StatusInfo supplies progressively shorter prompts for the single status row.
+// StatusInfo supplies progressively shorter prompts for the main status row.
 // Warning marks an unfinished shape independently of the prompt's wording.
 type StatusInfo struct {
 	Text, Compact, Minimal string
@@ -711,12 +725,21 @@ type StatusInfo struct {
 
 func (e *Editor) Status() StatusInfo {
 	status := e.status()
-	if e.KnobUsed && e.Message == "" {
-		target := "FG"
-		if e.KnobBackground {
-			target = "BG"
+	if e.Message == "" && !e.Picker && !e.Help && !e.Toolbar {
+		if e.KnobUsed {
+			target := "FG"
+			if e.KnobBackground {
+				target = "BG"
+			}
+			status.Text += " | Knob: " + target
 		}
-		status.Text += " | Knob: " + target + " [Aa]"
+		status.Text += " [Aa]"
+		if status.Compact != "" {
+			status.Compact += " [Aa]"
+		}
+		if status.Minimal != "" {
+			status.Minimal += " [Aa]"
+		}
 	}
 	return status
 }
@@ -725,37 +748,25 @@ func (e *Editor) status() StatusInfo {
 	if e.Message != "" {
 		return StatusInfo{Text: e.Message}
 	}
-	pending := e.Phase > 0 && (e.Tool == ToolLine || e.Tool == ToolRectangle || e.Tool == ToolOval)
+	pending := e.PendingShape()
 	if e.Picker {
 		return e.pickerStatus(pending)
 	}
 	if e.Help {
-		status := StatusInfo{
+		return StatusInfo{
 			Text:    "Arrows/PgUp/PgDn: scroll | Esc: close",
 			Compact: "Arrows: scroll | Esc: close",
 			Minimal: "Esc: close",
 			Warning: pending,
 		}
-		if pending {
-			status.Text = "PREVIEW paused | " + status.Text
-			status.Compact = "PREVIEW | " + status.Compact
-			status.Minimal = "PREVIEW | " + status.Minimal
-		}
-		return status
 	}
 	if e.Toolbar {
-		status := StatusInfo{
+		return StatusInfo{
 			Text:    "Arrows: choose | Enter: activate",
 			Compact: "Arrows/Enter: tool",
 			Minimal: "Toolbar",
 			Warning: pending,
 		}
-		if pending {
-			status.Text = "PREVIEW paused | " + status.Text
-			status.Compact = "PREVIEW | " + status.Compact
-			status.Minimal = "PREVIEW | Toolbar"
-		}
-		return status
 	}
 	if e.Tool == ToolText {
 		return StatusInfo{Text: e.displayColorNames(e.Text.FG, e.Text.BG)}
@@ -803,10 +814,6 @@ func (e *Editor) status() StatusInfo {
 		Compact: step + " | Enter: " + next,
 		Minimal: "Enter: " + next,
 		Warning: pending,
-	}
-	if pending {
-		status.Compact = "PREVIEW | " + status.Compact
-		status.Minimal = "PREVIEW | " + status.Minimal
 	}
 	brush := e.brush()
 	status.Text = status.Compact + " | " + label + ": " + paintName(*brush) + " " + e.displayColorNames(brush.FG, brush.BG)

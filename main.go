@@ -238,7 +238,7 @@ func run(args []string, out, errOut io.Writer) error {
 		}
 		if redraw {
 			if e.Help {
-				e.HelpScroll = min(e.HelpScroll, max(0, ui.HelpRows(w)-max(1, h-2)))
+				e.HelpScroll = min(e.HelpScroll, max(0, ui.HelpRows(w)-max(1, h-e.StatusRows(h)-1)))
 			}
 			ui.Render(screen, e)
 		}

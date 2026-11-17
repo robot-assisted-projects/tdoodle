@@ -54,10 +54,13 @@ func TestPickerRevealsSourceAndKeepsDrawingHandleVisible(t *testing.T) {
 	}
 	normal := newScreen(80, 8, 256)
 	Render(normal, e)
-	for _, want := range []string{"PREVIEW", "@ red/blue", "Enter: sample", "Esc: cancel"} {
+	for _, want := range []string{"@ red/blue", "Enter: sample", "Esc: cancel"} {
 		if !strings.Contains(normal.row(7), want) {
 			t.Fatalf("80-column picker lost %q: %q", want, normal.row(7))
 		}
+	}
+	if !strings.Contains(normal.row(6), "PREVIEW paused") {
+		t.Fatal("picker hid the pending shape's phase row")
 	}
 	e.HandleKey(tcell.NewEventKey(tcell.KeyEsc, "", tcell.ModNone), time.Now())
 	Render(s, e)

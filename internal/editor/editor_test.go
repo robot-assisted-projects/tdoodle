@@ -43,7 +43,7 @@ func TestShapeStatusFollowsDrawingPhases(t *testing.T) {
 						t.Fatalf("phase %d: status %q is missing %q", phase, status.Text, want)
 					}
 				}
-				if status.Warning != (phase > 0) || strings.Contains(status.Text, "PREVIEW") != (phase > 0) {
+				if status.Warning != (phase > 0) {
 					t.Fatalf("phase %d: unexpected preview warning %+v", phase, status)
 				}
 				if phase > 0 {
@@ -60,11 +60,11 @@ func TestShapeStatusFollowsDrawingPhases(t *testing.T) {
 
 func TestTextAndPenStatusDoNotWarnAboutPreviews(t *testing.T) {
 	e := newTestEditor(t)
-	if status := e.Status(); status.Warning || status.Text != "white/black" {
+	if status := e.Status(); status.Warning || status.Text != "white/black [Aa]" {
 		t.Fatalf("text status = %+v", status)
 	}
 	e.SwitchTool(ToolPen)
-	for _, want := range []string{"Pen UP: * white/black", "Pen DOWN: * white/black", "Pen UP: * white/black"} {
+	for _, want := range []string{"Pen UP: * white/black [Aa]", "Pen DOWN: * white/black [Aa]", "Pen UP: * white/black [Aa]"} {
 		if status := e.Status(); status.Warning || status.Text != want {
 			t.Fatalf("pen status = %+v, want %q without preview warning", status, want)
 		}

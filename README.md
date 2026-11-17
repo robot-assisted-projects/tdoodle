@@ -107,11 +107,23 @@ Return progresses through the phases of your brush's drawing, and backspace regr
 | Ctrl+P / Ctrl+L | Open colors / refresh screen |
 
 Shapes preview over existing artwork and commit only on the final Enter.
-The right side of the status row shows the current step and what Enter does
-next. An unfinished shape is marked `PREVIEW` in bold yellow until it is drawn
-or canceled. Narrow terminals keep the preview warning and next action ahead
-of brush details; very narrow terminals show just the warning. Toolbar and help
-show a paused-preview warning while the shape remains unfinished.
+A second status row appears while a shape is unfinished, showing its full path:
+
+```text
+Oval:      [center] --> [stroke] --> [stretch] --> [fill] --> [draw]
+Rectangle: [corner] --> [stroke] --> [fill] --> [draw]
+Line:      [start] --> [stroke] --> [draw]
+```
+
+The current step is bold with reversed foreground/background. Enter advances;
+Backspace goes back. The final Enter commits the shape and removes the extra
+row. The drawing scrolls above both status rows without changing the document's
+dimensions. Narrow terminals shorten the chain while keeping the active step
+visible; terminals shorter than three rows use the main row's preview prompt.
+Colors, the picker, toolbar, and help preserve the phase row while drawing is
+paused. Save messages use the main row while the phase row remains visible.
+The main row keeps the next Enter action and an `Aa` sample of the current
+foreground/background colors, with keyboard controls as well as the knob.
 Escape and switching tools cancel the preview. A completed shape or pen stroke
 is one undo step. 
 
@@ -162,7 +174,7 @@ go test -race ./...
 - `internal/canvas`: document, colors, paint modes, validation, atomic storage.
 - `internal/geometry`: clipped line/rectangle/affine oval rasterization.
 - `internal/editor`: input, tool phases, preview composition, undo/redo, viewport.
-- `internal/ui`: single-row toolbar, color adaptation, help, terminal rendering.
+- `internal/ui`: toolbar, temporary drawing phase row, color adaptation, help, terminal rendering.
 - `main.go`: command line, terminal lifecycle, save/recovery scheduling.
 
 Tests cover cancellation without changing artwork, grouped undo, all paint

@@ -65,9 +65,5 @@ func (e *Editor) pickerStatus(pending bool) StatusInfo {
 		Fallback: "PICK",
 		Warning:  pending,
 	}
-	if pending {
-		status.Text = "PREVIEW paused | " + status.Text
-		status.Compact = "PREVIEW | " + status.Compact
-	}
 	return status
 }
