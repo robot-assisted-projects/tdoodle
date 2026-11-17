@@ -172,12 +172,12 @@ func TestPhaseBarClearsWhenOperationEnds(t *testing.T) {
 			e.Move(4, 2)
 			s := newScreen(80, 5, 16)
 			Render(s, e)
-			if !strings.Contains(s.row(3), "PREVIEW") {
+			if !strings.Contains(s.row(3), "Drawing Line") {
 				t.Fatal("unfinished line did not warn")
 			}
 			e.HandleKey(tcell.NewEventKey(end, "", tcell.ModNone), time.Now())
 			Render(s, e)
-			if strings.Contains(s.row(3)+s.row(4), "PREVIEW") || e.Status().Warning {
+			if strings.Contains(s.row(3)+s.row(4), "Drawing Line") || e.Status().Warning {
 				t.Fatalf("ended operation retained warning: %q", s.row(4))
 			}
 			for x := 0; x < s.w; x++ {
@@ -209,7 +209,7 @@ func TestPausedPreviewKeepsPhaseBarAndOverlayControls(t *testing.T) {
 			s := newScreen(140, 8, 16)
 			Render(s, e)
 			row := s.row(7)
-			if !strings.Contains(s.row(6), "PREVIEW paused") || !strings.Contains(row, overlay.want) || !strings.Contains(row, "Arrows") {
+			if !strings.Contains(s.row(6), "Drawing Line (paused)") || !strings.Contains(row, overlay.want) || !strings.Contains(row, "Arrows") {
 				t.Fatalf("paused status lost warning or controls: %q", row)
 			}
 			if e.Phase != 1 || !reflect.DeepEqual(preview, e.Preview()) {
@@ -217,15 +217,15 @@ func TestPausedPreviewKeepsPhaseBarAndOverlayControls(t *testing.T) {
 			}
 			e.Message = "SAVE FAILED: permission denied"
 			Render(s, e)
-			if !strings.Contains(s.row(7), e.Message) || strings.Contains(s.row(7), "PREVIEW") {
+			if !strings.Contains(s.row(7), e.Message) || strings.Contains(s.row(7), "Drawing Line") {
 				t.Fatalf("preview warning displaced save error: %q", s.row(7))
 			}
-			if !strings.Contains(s.row(6), "PREVIEW paused") {
+			if !strings.Contains(s.row(6), "Drawing Line (paused)") {
 				t.Fatal("save message hid the unfinished shape's phase row")
 			}
 			e.HandleKey(tcell.NewEventKey(tcell.KeyEsc, "", tcell.ModNone), time.Now())
 			Render(s, e)
-			if !strings.Contains(s.row(6), "PREVIEW") || !strings.Contains(s.row(7), "Enter: draw") {
+			if !strings.Contains(s.row(6), "Drawing Line") || !strings.Contains(s.row(7), "Enter: draw") {
 				t.Fatalf("closing overlay lost preview guidance: %q", s.row(7))
 			}
 		})

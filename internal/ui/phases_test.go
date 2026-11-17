@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v3"
+	"github.com/gdamore/tcell/v3/color"
 
 	"tdoodle/internal/canvas"
 	"tdoodle/internal/editor"
@@ -36,6 +37,9 @@ func TestPhaseBarFollowsShapeForwardAndBack(t *testing.T) {
 				t.Helper()
 				Render(s, e)
 				row := s.row(10)
+				if !strings.HasPrefix(row, "  Drawing "+tc.tool.String()+"  ") {
+					t.Fatalf("missing shape name or left padding: %q", row)
+				}
 				want := "[" + strings.Join(tc.steps, "] --> [") + "]"
 				if !strings.Contains(row, want) {
 					t.Fatalf("phase %d lost full sequence %q: %q", phase, want, row)
@@ -46,6 +50,9 @@ func TestPhaseBarFollowsShapeForwardAndBack(t *testing.T) {
 						_, style, _ := s.buffer.Get(x, 10)
 						if style.HasReverse() != (i == phase) || style.HasBold() != (i == phase) {
 							t.Fatalf("phase %d: %s has incorrect highlighting", phase, step)
+						}
+						if style.GetBackground() != color.Black {
+							t.Fatalf("phase %d: %s lost the strip's black background", phase, step)
 						}
 					}
 				}
@@ -76,6 +83,9 @@ func TestPhaseBarFollowsShapeForwardAndBack(t *testing.T) {
 func TestPhaseBarKeepsCursorAboveStatusAndRestoresCanvas(t *testing.T) {
 	e := newEditor(t)
 	e.Cursor = canvas.Point{X: 5, Y: 4}
+	for x := 0; x < 80; x++ {
+		e.Doc.Set(canvas.Point{X: x, Y: 5}, canvas.Cell{Rune: '.', FG: canvas.White, BG: canvas.Blue})
+	}
 	e.Doc.Set(canvas.Point{X: 10, Y: 5}, canvas.Cell{Rune: '@', FG: canvas.Green, BG: canvas.Black})
 	before := append([]canvas.Cell(nil), e.Doc.Cells...)
 	s := newScreen(80, 6, 256)
@@ -88,6 +98,17 @@ func TestPhaseBarKeepsCursorAboveStatusAndRestoresCanvas(t *testing.T) {
 	}
 	if !strings.Contains(s.row(4), "[stroke]") {
 		t.Fatal("missing phase row above the main status")
+	}
+	end := strings.Index(s.row(4), "[draw]") + len("[draw]")
+	for x := end; x < end+2; x++ {
+		text, style, _ := s.buffer.Get(x, 4)
+		if text != " " || style.GetBackground() != color.Black || style.HasReverse() {
+			t.Fatal("phase strip must end with two spaces on black")
+		}
+	}
+	text, style, _ := s.buffer.Get(end+2, 4)
+	if text != "." || style.GetBackground() != ColorFor(canvas.Blue, true, 256, false) {
+		t.Fatal("phase strip extended over the canvas beyond its padding")
 	}
 	e.HandleKey(tcell.NewEventKey(tcell.KeyEsc, "", tcell.ModNone), time.Now())
 	Render(s, e)

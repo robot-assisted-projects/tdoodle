@@ -45,7 +45,9 @@ func Render(screen Screen, e *editor.Editor) {
 	blank := canvas.Blank()
 	preview := e.Preview()
 	cursor := e.DisplayCursor()
-	for y := 0; y < canvasHeight; y++ {
+	// Paint beneath the compact phase strip so the rest of its row keeps the
+	// canvas background, and a shorter strip cannot leave old status text behind.
+	for y := 0; y < h-1; y++ {
 		for x := 0; x < w; x++ {
 			point := canvas.Point{X: x + e.Offset.X, Y: y + e.Offset.Y}
 			cell := blank
@@ -74,10 +76,8 @@ func Render(screen Screen, e *editor.Editor) {
 		}
 	}
 	base := tcell.StyleDefault.Foreground(color.Silver).Background(color.Black)
-	for y := canvasHeight; y < h; y++ {
-		for x := 0; x < w; x++ {
-			screen.Put(x, y, " ", base)
-		}
+	for x := 0; x < w; x++ {
+		screen.Put(x, h-1, " ", base)
 	}
 	if e.StatusRows(h) == 2 {
 		renderPhases(screen, e, w, h-2, base)
@@ -136,11 +136,17 @@ func renderStatus(screen Screen, e *editor.Editor, w, y int, base tcell.Style, p
 		statusStyle = base.Bold(true)
 	}
 	_, h := screen.Size()
-	if status.Warning && e.StatusRows(h) == 1 {
-		// Short terminals cannot fit a separate phase row.
-		status.Text = "PREVIEW | " + status.Text
-		status.Compact = "PREVIEW | " + status.Compact
-		status.Minimal = "PREVIEW | " + status.Minimal
+	if status.Warning {
+		label := "Drawing " + e.Tool.String()
+		if status.Fallback == "" {
+			status.Fallback = label
+		}
+		if e.StatusRows(h) == 1 {
+			// Short terminals cannot fit a separate phase row.
+			status.Text = label + " | " + status.Text
+			status.Compact = label + " | " + status.Compact
+			status.Minimal = label + " | " + status.Minimal
+		}
 	}
 	// Reserve the active tool even when a long prompt needs most of the row.
 	available := max(0, w-len(minimum)-1)
@@ -234,9 +240,6 @@ func statusText(status editor.StatusInfo, width int) string {
 	}
 	if status.Fallback != "" {
 		return status.Fallback
-	}
-	if status.Warning {
-		return "PREVIEW"
 	}
 	if status.Minimal != "" {
 		return status.Minimal

@@ -59,7 +59,7 @@ func TestPickerRevealsSourceAndKeepsDrawingHandleVisible(t *testing.T) {
 			t.Fatalf("80-column picker lost %q: %q", want, normal.row(7))
 		}
 	}
-	if !strings.Contains(normal.row(6), "PREVIEW paused") {
+	if !strings.Contains(normal.row(6), "Drawing Line (paused)") {
 		t.Fatal("picker hid the pending shape's phase row")
 	}
 	e.HandleKey(tcell.NewEventKey(tcell.KeyEsc, "", tcell.ModNone), time.Now())
